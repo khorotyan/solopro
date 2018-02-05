@@ -169,9 +169,9 @@ public class SignupCont : MonoBehaviour
 
             User user = JsonUtility.FromJson<User>(jsonData);
             transform.GetComponent<PlayerCont>().token = user.token;
-            transform.GetComponent<PlayerCont>().email = rv.suEmailInput.text;
-            transform.GetComponent<PlayerCont>().username = rv.suUsernameInput.text;
             transform.GetComponent<PlayerCont>().noWins = 0;
+            PlayerCont.email = rv.suEmailInput.text;
+            PlayerCont.username = rv.suUsernameInput.text;
 
             transform.GetComponent<SaveManager>().SaveAutoLogin(rv.suAutoLoginToggle.isOn);
             transform.GetComponent<SaveManager>().SaveEmail(rv.suEmailInput.text);
@@ -194,6 +194,7 @@ public class SignupCont : MonoBehaviour
             }
             rv.maNoWinsText.text = "Wins: 0";
 
+            PlayerCont.online = true;
             rv.mainPage.SetActive(true);
             rv.signupPanel.SetActive(false);
         }

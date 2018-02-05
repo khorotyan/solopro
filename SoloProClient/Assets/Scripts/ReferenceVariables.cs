@@ -53,8 +53,51 @@ public class ReferenceVariables : MonoBehaviour
     public Transform chChallsContainer;
 
     [Space(5)]
+    [Header("ChallWaitPanel")]
+    public GameObject challWaitPanel;
+    public Slider cwChallAcceptTimer;
+    public Text cwChallAcceptTime;
+
+    [Space(5)]
+    [Header("ChallNotPanel")]
+    public GameObject challNotPanel;
+    public Text cnOppUsername;
+    public Button cnAcceptButton;
+    public Button cnRejectButton;
+    public Slider cnChallAcceptTimer;
+    public Text cnChallAcceptTime;
+
+    [Space(5)]
+    [Header("ChallStartPanel")]
+    public GameObject challStartPanel;
+    public Text csPlUsername;
+    public Text csOppUsername;
+    public Image csPlIcon;
+    public Image csOppIcon;
+    public Slider csChallAcceptTimer;
+    public Text csChallAcceptTime;
+
+    [Space(5)]
+    [Header("GamePanel")]
+    public GameObject gamePanel;
+    public Slider gaGameTimer;
+    public Text gaTimeLeft;
+    public Text gaPlUsername;
+    public Text gaOppUsername;
+    public Text gaPlScore;
+    public Text gaOppScore;
+    public Image gaPlIcon;
+    public Image gaOppIcon;
+    public Text gaQuestion;
+    public Button gaAns1;
+    public Button gaAns2;
+    public Button gaAns3;
+    public Button gaAns4;
+    public GameObject gaQNumShower;
+    public Text gaQuestionNum;
+
+    [Space(5)]
     [Header("Other")]
-    public GameObject playPage;
     public Sprite maleSprite;
     public Sprite femaleSprite;
     public Sprite inpDefaultSp;
@@ -69,6 +112,11 @@ public class ReferenceVariables : MonoBehaviour
     private float infoTime = 0f;
     private bool canShowInfo = false;
     private string info = "";
+
+    private void Awake()
+    {
+        Application.runInBackground = true;
+    }
 
     private void Update()
     {

@@ -11,6 +11,7 @@ App.set('port', port);
 console.log(`Server listening on port ${port}`);
 
 const server = http.createServer(App);
+require('./sockets/challenges')(server);
 server.listen(port);
 server.on('error', onError);
 server.on('listening', onListening);

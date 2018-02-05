@@ -87,6 +87,10 @@ class UserRouter {
             .exec()
             .then(user => {
             if (user) {
+                // If the user is already online, do not let another signin
+                if (user.online == true) {
+                    return res.status(401).json({ message: 'Already online' });
+                }
                 if (autologin == false) {
                     // Compare the given password with the one in the databse which is hashed
                     bcrypt.compare(req.body.password, user.password, (err, result) => {

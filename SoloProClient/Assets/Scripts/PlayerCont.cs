@@ -10,11 +10,12 @@ public class PlayerCont : MonoBehaviour
     [System.NonSerialized]
     public string token = "";
     [System.NonSerialized]
-    public string email = "";
-    [System.NonSerialized]
-    public string username = "";
-    [System.NonSerialized]
     public int noWins = 0;
+
+    public static string email = "";
+    public static string username = "";
+    public static bool online = false;
+    public static bool busy = false;
 
     public static bool inNotPanel = false;
     public static bool inChallPanel = false;
@@ -23,16 +24,16 @@ public class PlayerCont : MonoBehaviour
     {
         rv = transform.GetChild(0).GetComponent<ReferenceVariables>();
 
-        //rv.reqURL = "localhost:3000";
-        rv.reqURL = "74803232.ngrok.io";
+        rv.reqURL = "http://localhost:3000";
+        //rv.reqURL = "2acef084.ngrok.io";
         //rv.reqURL = "https://astroffense-resistance.herokuapp.com";
 
         email = transform.GetComponent<LoadManager>().LoadEmail();
-
-        rv.maLogoutButton.onClick.AddListener(delegate { StartCoroutine(logout()); });
+        
+        rv.maLogoutButton.onClick.AddListener(delegate { StartCoroutine(logout(bttnClick: true)); });
     } 
 
-    private IEnumerator logout()
+    private IEnumerator logout(bool bttnClick = false)
     {
         WWWForm form = new WWWForm();
 
@@ -48,8 +49,12 @@ public class PlayerCont : MonoBehaviour
         {
             string jsonData = www.text;
 
-            transform.GetComponent<SaveManager>().SaveAutoLogin(false);
+            if (bttnClick == true)
+            {
+                transform.GetComponent<SaveManager>().SaveAutoLogin(false);
+            }
 
+            online = false;
             rv.siPasswordInput.text = "";
             rv.signinPanel.SetActive(true);
             rv.mainPage.SetActive(false);
@@ -80,9 +85,4 @@ public class User
     public bool male;
     public bool online;
     public string token;
-
-    public User()
-    {
-
-    }
 }

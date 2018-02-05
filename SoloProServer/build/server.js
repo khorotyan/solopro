@@ -8,6 +8,7 @@ const port = normalizePort(process.env.PORT || 3000);
 app_1.default.set('port', port);
 console.log(`Server listening on port ${port}`);
 const server = http.createServer(app_1.default);
+require('./sockets/challenges')(server);
 server.listen(port);
 server.on('error', onError);
 server.on('listening', onListening);
