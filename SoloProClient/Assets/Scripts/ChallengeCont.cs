@@ -10,21 +10,64 @@ public class ChallengeCont : MonoBehaviour
 {
     private ReferenceVariables rv;
 
-    private Socket socket;
+    public Socket socket;
+
+    private Color32 btnNormCol = new Color32(255, 255, 255, 255);
+    private Color32 btnCorrCol = new Color32(195, 255, 193, 255);
+    private Color32 btnWrongCol = new Color32(255, 219, 219, 255);
 
     private string oppUsername = "";
 
-    private bool waitingForOpponent = false;
-    private bool waitingForChallAcc = false;
-    private bool waitTillChallStart = false;
+    private bool waitingForOpponent;
+    private bool waitingForChallAcc;
+    private bool waitTillChallStart;
+    private bool canStartQuizTimer;
+    private bool canShowResults;
+    private bool canStartBothAns;
+    private bool challCancelled;
 
-    private float challRefTime = 0;
-    private float challWaitTime = 5;
-    private float challAccTime = 5;
-    private float challStartTime = 5;
+    private float challRefTime;
+    private float challWaitTime;
+    private float challAccTime;
+    private float challStartTime;
+    private float quizTime;
+    private float resultsTime;
+    private float bothAnsTime;
+
+    private int[] sessionQs;
+    private int plScore = 0;
+    private int oppScore = 0;
+    private int round;
+    private int noAnswers;
+    private bool enMale;
+
+    public void Initialize()
+    {
+        waitingForOpponent = false;
+        waitingForChallAcc = false;
+        waitTillChallStart = false;
+        canStartQuizTimer = false;
+        canShowResults = false;
+        canStartBothAns = false;
+        challCancelled = false;
+
+        challRefTime = 0;
+        challWaitTime = 5;
+        challAccTime = 5;
+        challStartTime = 5;
+        quizTime = 15;
+        resultsTime = 5;
+        bothAnsTime = 2;
+
+        sessionQs = new int[3];
+        round = 0;
+        noAnswers = 0;
+        enMale = false;
+    }
 
     private void Awake()
     {
+        Initialize();
         rv = transform.GetChild(0).GetComponent<ReferenceVariables>();
 
         rv.maPlayButton.onClick.AddListener(delegate { OnMainPlayClick(); });
@@ -34,14 +77,25 @@ public class ChallengeCont : MonoBehaviour
         rv.ntChallengeButton.onClick.AddListener(delegate { OnChallengeClick(); });
 
         rv.chCloseButton.onClick.AddListener(delegate { OnChallPageClose(); });
+
+        rv.gaAns1.onClick.AddListener(delegate { OnAnswerButtonClick(buttonNum: 1); });
+        rv.gaAns2.onClick.AddListener(delegate { OnAnswerButtonClick(buttonNum: 2); });
+        rv.gaAns3.onClick.AddListener(delegate { OnAnswerButtonClick(buttonNum: 3); });
+        rv.gaAns4.onClick.AddListener(delegate { OnAnswerButtonClick(buttonNum: 4); });
     }
-    
+
+    private void OnDestroy()
+    {
+        DisconnectSocket();
+    }
+
     private void Start()
     {
         socket = IO.Socket(rv.reqURL + "/challenges");
 
         CheckForChallenge();
         CheckChallAccept();
+        GetOpponentScore();
     }
     
     private void Update()
@@ -50,6 +104,9 @@ public class ChallengeCont : MonoBehaviour
 
         WaitForOpponent();
         WaitForChallenge();
+        ManageQuizTimer();
+        ShowResults();
+        ToNextQuestion();
 
         ChallNotificationManage();
     }
@@ -117,7 +174,9 @@ public class ChallengeCont : MonoBehaviour
                 {
                     Transform challUser = Instantiate(rv.challengesObj, rv.chChallsContainer).transform;
 
-                    challUser.GetChild(0).GetComponent<Image>().sprite = sc.users[i].male == false ? rv.femaleSprite : rv.maleSprite;
+                    bool male = sc.users[i].male;
+
+                    challUser.GetChild(0).GetComponent<Image>().sprite = male == false ? rv.femaleSprite : rv.maleSprite;
                     challUser.GetChild(1).GetComponent<Text>().text = sc.users[i].username;
                     challUser.GetChild(2).GetComponent<Text>().text = "Wins: " + sc.users[i].wins;
         
@@ -127,10 +186,55 @@ public class ChallengeCont : MonoBehaviour
                         challUser.GetChild(4).GetChild(1).gameObject.SetActive(false);
 
                         challUser.GetChild(3).gameObject.SetActive(true);
-                        challUser.GetChild(3).GetComponent<Button>().onClick.AddListener(delegate { OnChallengeSend(plUsername, oppUsername); });
+                        challUser.GetChild(3).GetComponent<Button>().onClick.AddListener(delegate { OnChallengeSend(plUsername, oppUsername, male); });
                     }
                 }   
             }
+        }
+        else
+        {
+            Debug.Log(www.error);
+        }
+    }
+
+    private IEnumerator UpdatePlayerScore()
+    {
+        WWWForm form = new WWWForm();
+        form.AddField("email", PlayerCont.email);
+        form.AddField("wins", PlayerCont.wins);
+
+        Dictionary<string, string> headers = form.headers;
+        headers.Add("Authorization", "Bearer " + transform.GetComponent<PlayerCont>().token);
+        
+        WWW www = new WWW(rv.reqURL + "/users/wins", form.data, headers);
+        yield return www;
+
+        if (www.error == null)
+        {
+            string jsonData = www.text;        
+        }
+        else
+        {
+            Debug.Log(www.error);
+        }
+    }
+
+    private IEnumerator GetPlayerInfo()
+    {
+        Dictionary<string, string> headers = new Dictionary<string, string>();
+        headers.Add("Content-Type", "application/json");
+        headers.Add("Authorization", "Bearer " + transform.GetComponent<PlayerCont>().token);
+
+        WWW www = new WWW(rv.reqURL + "/users" + PlayerCont.email, null, headers);
+        yield return www;
+
+        if (www.error == null)
+        {
+            string jsonData = www.text;
+
+            User user = JsonUtility.FromJson<User>(jsonData);
+
+            PlayerCont.wins = user.wins;
         }
         else
         {
@@ -154,13 +258,36 @@ public class ChallengeCont : MonoBehaviour
     }
     
     // Notify the server that there is a challenge (send a challenge) - Challenge Sender
-    private void OnChallengeSend(string player, string opponent)
+    private void OnChallengeSend(string player, string opponent, bool male)
     {
         Challenge challenge = new Challenge();
         challenge.player = player;
         challenge.opponent = opponent;
 
+        if (PlayerCont.male == true)
+        {
+            challenge.male = true;
+        }
+        else
+        {
+            challenge.male = false;
+        }
+         
         socket.Emit("CHALLENGE_SENT", JsonUtility.ToJson(challenge));
+
+        if (male == true)
+        {
+            rv.gaOppIcon.sprite = rv.maleSprite;
+            rv.csOppIcon.sprite = rv.maleSprite;
+        }
+        else
+        {
+            rv.gaOppIcon.sprite = rv.femaleSprite;
+            rv.csOppIcon.sprite = rv.femaleSprite;
+        }
+
+        rv.csPlUsername.text = PlayerCont.username.ToString();
+        rv.csOppUsername.text = opponent;
 
         oppUsername = opponent;
         rv.challWaitPanel.SetActive(true);
@@ -182,7 +309,8 @@ public class ChallengeCont : MonoBehaviour
                 // If a challenge is sent to the player
                 if (challenge.player == PlayerCont.username)
                 {
-                    // Open the challenge accept panel   
+                    enMale = challenge.male;
+
                     oppUsername = challenge.opponent;
                     waitingForChallAcc = true;
                     PlayerCont.inChallPanel = false;
@@ -225,8 +353,21 @@ public class ChallengeCont : MonoBehaviour
         {
             if (challAccTime == 5)
             {
+                if (enMale == true)
+                {
+                    rv.gaOppIcon.sprite = rv.maleSprite;
+                    rv.csOppIcon.sprite = rv.maleSprite;
+                }
+                else
+                {
+                    rv.gaOppIcon.sprite = rv.femaleSprite;
+                    rv.csOppIcon.sprite = rv.femaleSprite;
+                }
+
                 rv.challNotPanel.SetActive(true);
 
+                rv.cnAcceptButton.onClick.RemoveAllListeners();
+                rv.cnRejectButton.onClick.RemoveAllListeners();
                 rv.cnAcceptButton.onClick.AddListener(delegate { OnChallengeAccRejSend(accept: true); });
                 rv.cnRejectButton.onClick.AddListener(delegate { OnChallengeAccRejSend(accept: false); });
             }
@@ -259,10 +400,17 @@ public class ChallengeCont : MonoBehaviour
     {
         if (accept == true)
         {
+            for (int i = 0; i < 3; i++)
+            {
+                int qNum = Random.Range(0, rv.quizes.Count);
+                sessionQs[i] = qNum;
+            }
+ 
             Challenge challenge = new Challenge();
             challenge.player = PlayerCont.username;
             challenge.opponent = oppUsername;
             challenge.accepted = accept;
+            challenge.questions = sessionQs;
 
             socket.Emit("CHALLENGE_ACCREJ", JsonUtility.ToJson(challenge));
 
@@ -273,7 +421,12 @@ public class ChallengeCont : MonoBehaviour
         }
         else
         {
-            // Cancel the notification of the other player (Waiting ...)
+            Challenge challenge = new Challenge();
+            challenge.player = PlayerCont.username;
+            challenge.opponent = oppUsername;
+            challenge.accepted = accept;
+
+            socket.Emit("CHALLENGE_ACCREJ", JsonUtility.ToJson(challenge));
 
             PlayerCont.busy = false;
         }
@@ -295,11 +448,30 @@ public class ChallengeCont : MonoBehaviour
 
                 // If a challenge is sent to the player
                 if (challenge.player == PlayerCont.username && challenge.opponent == oppUsername)
-                {                  
-                    waitTillChallStart = true;
+                {          
+                    if (challenge.accepted == true)
+                    {
+                        sessionQs = challenge.questions;
 
-                    challAccTime = 5;
-                    challWaitTime = 5;
+                        waitTillChallStart = true;
+
+                        challAccTime = 5;
+                        challWaitTime = 5;
+                    }
+                    else
+                    {
+                        challCancelled = true;
+                        PlayerCont.inChallPanel = true;
+                        PlayerCont.busy = false;
+                        waitingForOpponent = false;
+                        challWaitTime = 5;
+                    }
+
+                    if (challenge.cancelled == true)
+                    {
+                        PlayerCont.busy = false;
+                        challCancelled = true;
+                    }
                 }
             }
         });
@@ -326,32 +498,67 @@ public class ChallengeCont : MonoBehaviour
             {
                 StartCoroutine(TurnOffLobby());
 
-                StartCoroutine(AnimateChallQuestion());        
+                StartCoroutine(AnimateChallQuestion());
             }
         }
-    }
 
+        if (challCancelled == true)
+        {
+            rv.challengesPanel.SetActive(true);
+            rv.challWaitPanel.SetActive(false);
+            rv.challStartPanel.SetActive(false);
+            Initialize();
+
+            challCancelled = false;
+        }
+    }
+    
+    // Close the lobby
     private IEnumerator TurnOffLobby()
     {
-        yield return new WaitForSeconds(0.5f);
-
-        rv.challStartPanel.SetActive(false);
-        rv.gamePanel.SetActive(true);
         waitTillChallStart = false;
         challStartTime = 5;
+
+        yield return new WaitForSeconds(0.5f);
+
+        rv.gaPlUsername.text = PlayerCont.username;
+        rv.gaOppUsername.text = oppUsername;
+        rv.challStartPanel.SetActive(false);
+        rv.gamePanel.SetActive(true);  
     }
 
+    // Show question number with an animation
     private IEnumerator AnimateChallQuestion()
     {
+        round++;
+
+        rv.gaAns1.interactable = false;
+        rv.gaAns2.interactable = false;
+        rv.gaAns3.interactable = false;
+        rv.gaAns4.interactable = false;
+
         Color32 imageCol = rv.gaQNumShower.GetComponent<Image>().color;
         imageCol.a = 255;
         rv.gaQNumShower.GetComponent<Image>().DOColor(imageCol, 0.5f);
 
+        rv.gaQuestionNum.GetComponent<Text>().text = "Round " + round;
         Color32 textCol = rv.gaQuestionNum.GetComponent<Text>().color;
         textCol.a = 255;
         rv.gaQuestionNum.GetComponent<Text>().DOColor(textCol, 0.5f);
 
-        yield return new WaitForSeconds(1.5f);
+        yield return new WaitForSeconds(0.5f);
+
+        rv.gaAns1.GetComponent<Image>().color = btnNormCol;
+        rv.gaAns2.GetComponent<Image>().color = btnNormCol;
+        rv.gaAns3.GetComponent<Image>().color = btnNormCol;
+        rv.gaAns4.GetComponent<Image>().color = btnNormCol;
+        quizTime = 15;
+        noAnswers = 0;
+        rv.gaGameTimer.value = 15;
+        rv.gaTimeLeft.text = "15";
+        LoadQuestion();
+
+        yield return new WaitForSeconds(1f);
 
         imageCol.a = 0;
         rv.gaQNumShower.GetComponent<Image>().DOColor(imageCol, 0.5f);
@@ -360,9 +567,259 @@ public class ChallengeCont : MonoBehaviour
         rv.gaQuestionNum.GetComponent<Text>().DOColor(textCol, 0.5f);
 
         yield return new WaitForSeconds(0.5f);
+
+        canStartQuizTimer = true;
+
+        rv.gaAns1.interactable = true;
+        rv.gaAns2.interactable = true;
+        rv.gaAns3.interactable = true;
+        rv.gaAns4.interactable = true;
     }
 
+    // Load challenge ui
+    private void LoadQuestion()
+    {
+        Quiz currQ = rv.quizes[sessionQs[round - 1]];
+        rv.gaQuestion.text = currQ.question;
+        rv.gaAns1.transform.GetChild(0).GetComponent<Text>().text = currQ.answer1;
+        rv.gaAns2.transform.GetChild(0).GetComponent<Text>().text = currQ.answer2;
+        rv.gaAns3.transform.GetChild(0).GetComponent<Text>().text = currQ.answer3;
+        rv.gaAns4.transform.GetChild(0).GetComponent<Text>().text = currQ.answer4;
+    }
 
+    // Manage challenge question timer
+    private void ManageQuizTimer()
+    {
+        if (canStartQuizTimer == true)
+        {
+            quizTime -= Time.deltaTime;
+
+            if (quizTime >= 0)
+            {
+                rv.gaGameTimer.value = quizTime;
+
+                if (quizTime > 3)
+                {
+                    rv.gaTimeLeft.text = quizTime.ToString("N0");
+                }
+                else
+                {
+                    rv.gaTimeLeft.text = quizTime.ToString("N1");
+                }
+            }
+            else
+            {
+                canStartQuizTimer = false;
+                quizTime = 15;
+
+                int corrAns = rv.quizes[sessionQs[round - 1]].ansNum;
+                
+                Button corrButton = GetButtonFromID(corrAns);
+                corrButton.GetComponent<Image>().color = btnCorrCol;
+
+                StartCoroutine(OnTimeEnd());         
+            }
+        }
+    }
+
+    // Wait a little and show the correct answer
+    private IEnumerator OnTimeEnd()
+    {
+        yield return new WaitForSeconds(1f);
+
+        if (round <= 2)
+        {
+            StartCoroutine(AnimateChallQuestion());
+        }
+        else
+        {
+            Initialize();
+            canShowResults = true;
+        }
+    }
+
+    // Whenever the user answers the question, check whether correct or not
+    private void OnAnswerButtonClick(int buttonNum)
+    {
+        int corrAns = rv.quizes[sessionQs[round - 1]].ansNum;
+
+        Button selButton = GetButtonFromID(buttonNum);
+        Button corrButton = GetButtonFromID(corrAns);
+
+        if (buttonNum == corrAns)
+        {
+            plScore += (15 + (int) rv.gaGameTimer.value);
+            selButton.GetComponent<Image>().color = btnCorrCol;
+        }
+        else
+        {
+            plScore -= 5;
+            selButton.GetComponent<Image>().color = btnWrongCol;
+
+            StartCoroutine(showCorrAns(corrButton));
+        }
+
+        rv.gaPlScore.text = plScore.ToString();
+
+        rv.gaAns1.interactable = false;
+        rv.gaAns2.interactable = false;
+        rv.gaAns3.interactable = false;
+        rv.gaAns4.interactable = false;
+
+        Challenge challenge = new Challenge();
+        challenge.player = PlayerCont.username;
+        challenge.opponent = oppUsername;
+        challenge.points = plScore;
+
+        noAnswers++;
+        socket.Emit("ANSWER_SENT", JsonUtility.ToJson(challenge));
+    }
+
+    private void GetOpponentScore()
+    {
+        socket.On("ANSWER_SENT_BACK", (data) =>
+        {
+            if (PlayerCont.online)
+            {
+                Challenge challenge = JsonUtility.FromJson<Challenge>(data.ToString());
+
+                // If a challenge is sent to the player
+                if ((challenge.player == PlayerCont.username && challenge.opponent == oppUsername) ||
+                    (challenge.opponent == PlayerCont.username && challenge.player == oppUsername))
+                {
+                    oppScore = challenge.points;
+                    noAnswers++;
+                }
+            }
+        });
+    }
+
+    // When both of the players answer, go to the next question
+    private void ToNextQuestion()
+    {
+        if (noAnswers == 2 && rv.gaGameTimer.value > 2 && canStartBothAns == false)
+        {
+            canStartBothAns = true;     
+        }
+
+        rv.gaOppScore.text = oppScore.ToString();
+
+        if (canStartBothAns == true)
+        {
+            bothAnsTime -= Time.deltaTime;
+
+            if (bothAnsTime <= 0)
+            {
+                canStartQuizTimer = false;
+                quizTime = 15;
+                bothAnsTime = 2;
+                noAnswers = 0;
+                canStartBothAns = false;
+
+                if (round <= 2)
+                {
+                    StartCoroutine(AnimateChallQuestion());
+                }
+                else
+                {
+                    Initialize();
+                    canShowResults = true;
+                }
+            }
+        }
+    }
+
+    // Shows the correct answer of the question
+    private IEnumerator showCorrAns(Button corrButton)
+    {
+        yield return new WaitForSeconds(1f);
+
+        corrButton.GetComponent<Image>().color = btnCorrCol;
+    }
+
+    private Button GetButtonFromID(int id)
+    {
+        if (id == 1)
+            return rv.gaAns1;
+        else if (id == 2)
+            return rv.gaAns2;
+        else if (id == 3)
+            return rv.gaAns3;
+        else
+            return rv.gaAns4;
+    }
+
+    private void ShowResults()
+    {
+        if (canShowResults == true)
+        {
+            if (resultsTime == 5)
+            {
+                if (plScore > oppScore)
+                {
+                    PlayerCont.wins++;
+                    rv.maNoWinsText.text = "Wins: " + PlayerCont.wins;
+                    rv.rsWinShower.SetActive(true);
+                    rv.rsDrawShower.SetActive(false);
+                    rv.rsLoseShower.SetActive(false);
+                }
+                else if (plScore < oppScore)
+                {
+                    rv.rsLoseShower.SetActive(true);
+                    rv.rsDrawShower.SetActive(false);
+                    rv.rsWinShower.SetActive(false);
+                }
+                else
+                {
+                    rv.rsDrawShower.SetActive(true);
+                    rv.rsLoseShower.SetActive(false);
+                    rv.rsWinShower.SetActive(false);
+                }
+
+                StartCoroutine(UpdatePlayerScore());
+
+                rv.resultsPanel.SetActive(true);
+                rv.gamePanel.SetActive(false);
+            }
+
+            resultsTime -= Time.deltaTime;
+
+            if (resultsTime >= 0)
+            {
+                rv.rsTimer.value = resultsTime;
+                rv.rsTime.text = resultsTime.ToString("N1");
+            }
+            else
+            {
+                plScore = 0;  
+                oppScore = 0;
+                rv.gaPlScore.text = "0";
+                rv.gaOppScore.text = "0";
+                resultsTime = 5;
+                round = 0;
+                oppUsername = "";
+                canShowResults = false;
+                PlayerCont.busy = false;
+                rv.resultsPanel.SetActive(false);
+            }
+        }
+    }
+
+    private void DisconnectSocket()
+    {
+        if (socket != null)
+        {
+            Challenge challenge = new Challenge();
+            challenge.player = PlayerCont.username;
+            challenge.opponent = oppUsername;
+            challenge.cancelled = true;
+
+            socket.Emit("CHALLENGE_ACCREJ", JsonUtility.ToJson(challenge));
+
+            socket.Disconnect();
+            socket = null;
+        }
+    }
 }
 
 public class Challenge
@@ -370,4 +827,8 @@ public class Challenge
     public string player;
     public string opponent;
     public bool accepted;
+    public int[] questions;
+    public int points;
+    public bool male;
+    public bool cancelled;
 }

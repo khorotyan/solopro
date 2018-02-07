@@ -1,0 +1,112 @@
+--q--
+Which of the following statements is not valid to create new object in C#?
+var a = new Int32();
+var a = new String();
+var a = new IComparable();
+var a = new [] {0};
+3
+--q--
+If you run C# executable file multiple times, multiple processes are created. If you want to have only one application process even if you launch multiple times, what can you use? 
+Semaphore
+Mutex
+Critical Section
+C# lock
+2
+--q--
+Which of the following operators cannot use operator overloading? 
+operator ++
+operator &
+operator ||
+operator true
+3
+--q--
+In multithread programming, which of the followings is not using Thread Pool? 
+BackgroundWorker class
+Asynchronous delegate
+Thread class
+Task class
+3
+--q--
+Class A has [Serializable()] attribute. When is [Serializable] checked? 
+At C# compile time
+At CLR runtime
+At JIT compile time
+At Linking 
+2
+--q--
+The followings are some examples of integer arrays. Which expression is not valid in C#? 
+int[][] c = new int[10][];
+int[][][] cc = new int[10][2][];
+int[,] b = new int[10, 2];
+int[, , ,] d = new int[10, 2, 2, 2];
+2
+--q--
+Which of the following statements is true about C# anonymous type? 
+Anonymous type can add new property once it is created
+Anonymous type can add an event
+You can use a delegate for a method in anonymous type
+Anonymous type is an immutable type
+4
+--q--
+When defining a class using C# Generics, which of the followings is invalid? 
+class MyClass where T : struct
+class MyClass where T : class
+class MyClass where T : IComparable
+All of the above are correct
+4
+--q--
+Which of the following statements is incorrect about C# delegate? 
+C# delegate supports multicast
+C# delegate is considered as a technical basis of C# event
+C# delegate can be used when passing a reference to a method
+C# delegate can not use +=, -= operators
+4
+--q--
+C# / .NET supports various built-in data structures. Which of the following data structures does not exist as built-in? 
+D-Array
+Binary Tree
+Stack
+Linked List
+3
+--q--
+Find an invalid example of using C# var 
+var a = 3.141592;
+var a = null;
+var a = db.Stores;
+var a = db.Stores.Single(p => p.Id == 1);
+2
+--q--
+In the following C# example, variable a is string. Find one that either is wrong or returns a different result. 
+a = a ?? "";
+a = a == null ? "" : a;
+a = (a is null) ? "" : a;
+if (a == null) a = "";
+3
+--q--
+Which of the following C# keywords has nothing to do with multithreading? 
+async
+await
+sealed
+lock
+3
+--q--
+Find an invalid expression among the following C# Generics examples. 
+class A where T : class, new()
+class A where T : struct, IComparable
+class A where T : class, struct
+class A where T : Stream where U : IDisposable
+3
+--q--
+new keyword in C# is used to creat new object from the type. Which of the followings is not allowed to use new keyword?
+Class: var a = new Class1();
+Interface : var a = new IComparable();
+Struct : var a = new Struct1();
+C# object : var a = new object();
+2
+--q--
+In the example below, button1 is an object of Button class in WinForms. Which one is a wrong expression as a click event handler? 
+button1.Click += new System.EventHandler(button1_Click);
+button1.Click += delegate { MessageBox.Show("Click"); };
+button1.Click += delegate(EventArgs e){MessageBox.Show("Click");};
+button1.Click += (s, e) => MessageBox.Show("Click"); 
+3

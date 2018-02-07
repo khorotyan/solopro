@@ -1,7 +1,10 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.Net;
+using System.IO;
 using UnityEngine;
 using UnityEngine.Networking;
+using System;
 
 public class PlayerCont : MonoBehaviour
 {
@@ -9,13 +12,13 @@ public class PlayerCont : MonoBehaviour
 
     [System.NonSerialized]
     public string token = "";
-    [System.NonSerialized]
-    public int noWins = 0;
 
     public static string email = "";
     public static string username = "";
     public static bool online = false;
     public static bool busy = false;
+    public static bool male = false;
+    public static int wins = 0;
 
     public static bool inNotPanel = false;
     public static bool inChallPanel = false;
@@ -24,14 +27,19 @@ public class PlayerCont : MonoBehaviour
     {
         rv = transform.GetChild(0).GetComponent<ReferenceVariables>();
 
-        rv.reqURL = "http://localhost:3000";
-        //rv.reqURL = "2acef084.ngrok.io";
-        //rv.reqURL = "https://astroffense-resistance.herokuapp.com";
+        //rv.reqURL = "http://localhost:3000";
+        rv.reqURL = "2acef084.ngrok.io";
+        //rv.reqURL = "https://solopro.herokuapp.com";
 
         email = transform.GetComponent<LoadManager>().LoadEmail();
         
         rv.maLogoutButton.onClick.AddListener(delegate { StartCoroutine(logout(bttnClick: true)); });
-    } 
+    }
+
+    private void Start()
+    {
+        //InvokeRepeating("CheckInternetAvail", 1f, 6f);
+    }
 
     private IEnumerator logout(bool bttnClick = false)
     {
@@ -64,6 +72,28 @@ public class PlayerCont : MonoBehaviour
             Debug.Log(www.error);
         }
     }
+
+    /*
+    private void CheckInternetAvail()
+    {
+        try
+        {
+            WebClient client = new System.Net.WebClient();
+            Stream stream = client.OpenRead("http://www.google.com");
+        }
+        catch (Exception)
+        {
+            rv.ShowInfo("No internet connection");
+
+            rv.challNotPanel.SetActive(false);
+            rv.challStartPanel.SetActive(false);
+            rv.challWaitPanel.SetActive(false);
+            rv.gamePanel.SetActive(false);
+            rv.notificationsPanel.SetActive(false);
+            transform.GetComponent<ChallengeCont>().Initialize();
+        }
+    }
+    */
 
     private void OnApplicationQuit()
     {

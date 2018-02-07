@@ -169,7 +169,7 @@ public class SignupCont : MonoBehaviour
 
             User user = JsonUtility.FromJson<User>(jsonData);
             transform.GetComponent<PlayerCont>().token = user.token;
-            transform.GetComponent<PlayerCont>().noWins = 0;
+            PlayerCont.wins = 0;
             PlayerCont.email = rv.suEmailInput.text;
             PlayerCont.username = rv.suUsernameInput.text;
 
@@ -184,11 +184,17 @@ public class SignupCont : MonoBehaviour
             rv.maUsernameText.text = rv.suUsernameInput.text;
             if (rv.suMaleToggle.isOn == false)
             {
+                PlayerCont.male = false;
+                rv.gaPlIcon.sprite = rv.femaleSprite;
+                rv.csPlIcon.sprite = rv.femaleSprite;
                 rv.maUserIcon.sprite = rv.femaleSprite;
                 rv.maUserIcon.GetComponent<RectTransform>().anchoredPosition = new Vector2(-390.5f, 822f);
             }
             else
             {
+                PlayerCont.male = true;
+                rv.gaPlIcon.sprite = rv.maleSprite;
+                rv.csPlIcon.sprite = rv.maleSprite;
                 rv.maUserIcon.sprite = rv.maleSprite;
                 rv.maUserIcon.GetComponent<RectTransform>().anchoredPosition = new Vector2(-390.5f, 828f);
             }

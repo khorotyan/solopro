@@ -98,17 +98,23 @@ public class SigninCont : MonoBehaviour
             User user = JsonUtility.FromJson<User>(jsonData);
 
             transform.GetComponent<PlayerCont>().token = user.token;
-            transform.GetComponent<PlayerCont>().noWins = user.wins;
+            PlayerCont.wins = user.wins;
             PlayerCont.username = user.username;
 
             rv.maUsernameText.text = user.username;
             if (user.male == false)
             {
+                PlayerCont.male = false;
+                rv.gaPlIcon.sprite = rv.femaleSprite;
+                rv.csPlIcon.sprite = rv.femaleSprite;
                 rv.maUserIcon.sprite = rv.femaleSprite;
                 rv.maUserIcon.GetComponent<RectTransform>().anchoredPosition = new Vector2(-390.5f, 822f);
             }
             else
             {
+                PlayerCont.male = true;
+                rv.gaPlIcon.sprite = rv.maleSprite;
+                rv.csPlIcon.sprite = rv.maleSprite;
                 rv.maUserIcon.sprite = rv.maleSprite;
                 rv.maUserIcon.GetComponent<RectTransform>().anchoredPosition = new Vector2(-390.5f, 828f);
             }

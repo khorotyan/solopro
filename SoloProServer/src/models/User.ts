@@ -7,7 +7,7 @@ const userSchema: Schema = new Schema({
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true},
     male: { type: Boolean, required: true },
-    online: { type: Boolean, default: true }
+    online: { type: Boolean, default: true },
 });
 
 export default model('User', userSchema);

@@ -51,7 +51,7 @@ class App {
         this.app.use((reqError, req, res, next) => {
             res.status(reqError.status || 500);
             res.json({
-                message: reqError.message
+                message: reqError.message,
             });
         });
     }

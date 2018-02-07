@@ -27,7 +27,7 @@ class App {
                 console.log('Unable to connect to the server. Please start the server. Error:', err);
             }
         });
-        (<any>mongoose).Promise = global.Promise;
+        (mongoose as any).Promise = global.Promise;
 
         this.app.use(morgan('dev'));
         this.app.use(bodyParser.json());
@@ -49,7 +49,7 @@ class App {
             }
         
             next();
-        });  
+        });
     }
 
     // Application routes
@@ -72,7 +72,7 @@ class App {
         this.app.use((reqError, req, res, next) => {
             res.status(reqError.status || 500);
             res.json({
-                message: reqError.message
+                message: reqError.message,
             });
         });
     }

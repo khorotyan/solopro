@@ -1,8 +1,10 @@
 ﻿using System.Collections;
+using Quobject.SocketIoClientDotNet.Client;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using DG.Tweening;
+using System;
 
 public class ReferenceVariables : MonoBehaviour
 {
@@ -97,6 +99,17 @@ public class ReferenceVariables : MonoBehaviour
     public Text gaQuestionNum;
 
     [Space(5)]
+    [Header("ResultsPanel")]
+    public GameObject resultsPanel;
+    public GameObject rsWinShower;
+    public GameObject rsDrawShower;
+    public GameObject rsLoseShower;
+    public Button rsAcceptButton;
+    public Button rsRejectButton;
+    public Slider rsTimer;
+    public Text rsTime;
+
+    [Space(5)]
     [Header("Other")]
     public Sprite maleSprite;
     public Sprite femaleSprite;
@@ -105,17 +118,28 @@ public class ReferenceVariables : MonoBehaviour
     public Sprite inpHighlightSp;
     public GameObject infoBox;
     public Text infoText;
+    public Button connButton;
+    public Transform connPanel;
+    public InputField connInput;
 
     [System.NonSerialized]
     public string reqURL;
+    [System.NonSerialized]
+    public List<Quiz> quizes = new List<Quiz>();
 
     private float infoTime = 0f;
     private bool canShowInfo = false;
-    private string info = "";
+    private bool canShowURlPanel = false;
+    private string info = "";  
 
     private void Awake()
     {
         Application.runInBackground = true;
+
+        connButton.onClick.AddListener(delegate { URLConfig(start: true); });
+        connInput.onEndEdit.AddListener(delegate { URLConfig(start: false); });
+
+        InitializeQuizes();
     }
 
     private void Update()
@@ -149,5 +173,54 @@ public class ReferenceVariables : MonoBehaviour
                 canShowInfo = false;
             }   
         }   
+    }
+
+    // Configure the connection url
+    private void URLConfig(bool start)
+    {
+        if (start)
+        {
+            connPanel.GetComponent<RectTransform>().DOAnchorPosY(0, 0.5f).SetEase(Ease.OutBack);
+        }
+        else
+        {
+            reqURL = connInput.text;
+            transform.parent.GetComponent<ChallengeCont>().enabled = true;
+            //transform.parent.GetComponent<ChallengeCont>().socket = IO.Socket(reqURL + "/challenges");
+            connPanel.gameObject.SetActive(false);
+        }
+    }
+
+    private void InitializeQuizes()
+    {
+        string all = Resources.Load("Questions").ToString();
+
+        string[] individuals = all.Split(new string[] { "--q--" }, StringSplitOptions.RemoveEmptyEntries);
+
+        for (int i = 0; i < individuals.Length; i++)
+        {
+            string[] ind = individuals[i].Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
+            quizes.Add(new Quiz(ind[1], ind[2], ind[3], ind[4], ind[5], int.Parse(ind[6])));
+        }
+    }
+}
+
+public class Quiz
+{
+    public string question;
+    public string answer1;
+    public string answer2;
+    public string answer3;
+    public string answer4;
+    public int ansNum;
+
+    public Quiz(string question, string answer1, string answer2, string answer3, string answer4, int ansNum)
+    {
+        this.question = question;
+        this.answer1 = answer1;
+        this.answer2 = answer2;
+        this.answer3 = answer3;
+        this.answer4 = answer4;
+        this.ansNum = ansNum;
     }
 }

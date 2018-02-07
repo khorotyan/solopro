@@ -1,7 +1,7 @@
-const io = require('socket.io');
+import * as io from 'socket.io';
 
-module.exports = server => {
-    
+module.exports = (server) => {
+
     const cnsp = io(server).of('/challenges');
 
     cnsp.on('connection', (socket) => {
@@ -14,7 +14,8 @@ module.exports = server => {
 
             const challenge = {
                 player: data.opponent,
-                opponent: data.player
+                opponent: data.player,
+                male: data.male
             };
 
             socket.broadcast.emit('CHALLENGE_SENT_BACK', challenge);
@@ -27,9 +28,11 @@ module.exports = server => {
             const challenge = {
                 player: data.opponent,
                 opponent: data.player,
-                accepted: data.accepted
+                accepted: data.accepted,
+                questions: data.questions,
+                cancelled: data.cancelled
             };
-            
+
             socket.broadcast.emit('CHALLENGE_ACCREJ_BACK', challenge);
         });
 
@@ -37,20 +40,13 @@ module.exports = server => {
 
             data = JSON.parse(data);
 
-            const info = {
+            const challenge = {
                 player: data.opponent,
                 opponent: data.player,
                 points: data.points
             };
-            
-            socket.broadcast.emit('ANSWER_SENT_BACK', info);
-        });
 
-        socket.on('disconnect', () => {
-            
-            //socket.broadcast.emit("USER_DISCONNECT_BACK", challenge);
-
-            console.log('User disconnected')
+            socket.broadcast.emit('ANSWER_SENT_BACK', challenge);
         });
     });
 }

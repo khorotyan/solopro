@@ -6,7 +6,7 @@ const mongoose_1 = require("mongoose");
 //  after 2 hours
 const invalidTokenSchema = new mongoose_1.Schema({
     _id: mongoose_1.Schema.Types.ObjectId,
-    token: { type: String, expires: 2 * 60 * 60 }
+    token: { type: String, expires: 2 * 60 * 60 },
 });
 exports.default = mongoose_1.model('InvalidToken', invalidTokenSchema);
 //# sourceMappingURL=InvalidToken.js.map

@@ -8,7 +8,7 @@ const userSchema = new mongoose_1.Schema({
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     male: { type: Boolean, required: true },
-    online: { type: Boolean, default: true }
+    online: { type: Boolean, default: true },
 });
 exports.default = mongoose_1.model('User', userSchema);
 //# sourceMappingURL=User.js.map

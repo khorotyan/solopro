@@ -16,18 +16,18 @@ class UserRouter {
             .sort({ online: -1, wins: -1 })
             .limit(100)
             .exec()
-            .then(users => {
+            .then((users) => {
             const response = {
-                users: users.map(user => ({
+                users: users.map((user) => ({
                     username: user.username,
                     wins: user.wins,
                     male: user.male,
-                    online: user.online
-                }))
+                    online: user.online,
+                })),
             };
             res.status(200).json(response);
         })
-            .catch(err => {
+            .catch((err) => {
             res.status(500).json({ error: err });
         });
     }
@@ -45,15 +45,15 @@ class UserRouter {
         */
         User_1.default.findOne({ username: username })
             .exec()
-            .then(user => {
-            if (user) {
+            .then((doc) => {
+            if (doc) {
                 return res.status(422).json({ message: 'Username already exists' });
             }
             else {
                 bcrypt.hash(req.body.password, 10, (err, hash) => {
                     if (err) {
                         return res.status(500).json({
-                            error: err
+                            error: err,
                         });
                         // If the creation of the hash is successful, only then create a new user
                     }
@@ -64,15 +64,15 @@ class UserRouter {
                             email: email,
                             password: hash,
                             male: male,
-                            online: true
+                            online: true,
                         });
                         user.save()
-                            .then(result => {
+                            .then((result) => {
                             const token = CheckAuth_1.default.GenerateToken(email, user._id);
                             return res.status(200).json({ token: token });
                         })
-                            .catch(err => {
-                            res.status(500).json({ error: err });
+                            .catch((error) => {
+                            res.status(500).json({ error: error });
                         });
                     }
                 });
@@ -85,13 +85,9 @@ class UserRouter {
         const autologin = req.body.autologin;
         User_1.default.findOneAndUpdate({ email: email }, { online: true })
             .exec()
-            .then(user => {
+            .then((user) => {
             if (user) {
-                // If the user is already online, do not let another signin
-                if (user.online == true) {
-                    return res.status(401).json({ message: 'Already online' });
-                }
-                if (autologin == false) {
+                if (autologin === false) {
                     // Compare the given password with the one in the databse which is hashed
                     bcrypt.compare(req.body.password, user.password, (err, result) => {
                         if (result) {
@@ -103,7 +99,6 @@ class UserRouter {
                                 male: user.male
                             });
                         }
-                        // (<any>user).wins => (user as any).wins
                         res.status(401).json({ message: 'Authentication failed' });
                     });
                 }
@@ -121,7 +116,7 @@ class UserRouter {
                 return res.status(401).json({ message: 'Authentication failed' });
             }
         })
-            .catch(err => {
+            .catch((err) => {
             res.status(500).json({ error: err });
         });
     }
@@ -130,10 +125,39 @@ class UserRouter {
         const email = req.body.email;
         User_1.default.findOneAndUpdate({ email: email }, { online: false })
             .exec()
-            .then(result => {
+            .then((result) => {
             res.status(200).json({ message: 'User logged off' });
         })
-            .catch(err => {
+            .catch((err) => {
+            res.status(500).json({ error: err });
+        });
+    }
+    // Update number of won games of a player
+    UpdateWins(req, res, next) {
+        const email = req.body.email;
+        const wins = req.body.wins;
+        User_1.default.findOneAndUpdate({ email: email }, { wins: wins })
+            .exec()
+            .then((result) => {
+            res.status(200).json({ message: 'User score updated' });
+        })
+            .catch((err) => {
+            res.status(500).json({ error: err });
+        });
+    }
+    // Get an individual user's information
+    GetPlayer(req, res, next) {
+        const email = req.params.email;
+        User_1.default.findOne({ email: email })
+            .exec()
+            .then((doc) => {
+            if (doc) {
+                res.status(200).json({ doc });
+            }
+            else {
+                res.status(404).json({ message: 'No user found with the provided email' });
+            }
+        }).catch((err) => {
             res.status(500).json({ error: err });
         });
     }
@@ -142,6 +166,8 @@ class UserRouter {
         this.router.get('/', CheckAuth_1.default.LoginCheck, this.GetAllUsers);
         this.router.post('/signup', this.CreateUser);
         this.router.post('/login', this.UserLogin);
+        this.router.post('/wins', CheckAuth_1.default.LoginCheck, this.UpdateWins);
+        this.router.get('/:email', CheckAuth_1.default.LoginCheck, this.GetPlayer);
         this.router.post('/logout', CheckAuth_1.default.InvalidateToken, this.UserLogout);
     }
 }

@@ -6,7 +6,7 @@ import { model, Schema } from 'mongoose';
 
 const invalidTokenSchema: Schema = new Schema({
     _id: Schema.Types.ObjectId,
-    token: {type: String, expires: 2 * 60 * 60}
+    token: {type: String, expires: 2 * 60 * 60},
 });
 
 export default model('InvalidToken', invalidTokenSchema);

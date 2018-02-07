@@ -8,14 +8,14 @@ import InvalidToken from '../models/InvalidToken';
 import CheckAuth from '../middleware/CheckAuth';
 
 class UserRouter {
-    
+
     public router: Router;
 
     constructor() {
         this.router = Router();
         this.routes();
     }
-    
+
     // Gets all the users sort based on online and then number of wins
     public GetAllUsers(req: Request, res: Response, next: NextFunction): void {
 
@@ -23,19 +23,19 @@ class UserRouter {
             .sort({online: -1, wins: -1})
             .limit(100)
             .exec()
-            .then(users => {
+            .then((users) => {
                 const response = {
-                    users: users.map(user => ({
-                        username: (<any>user).username,
-                        wins: (<any>user).wins,
-                        male: (<any>user).male,
-                        online: (<any>user).online
-                    }))
+                    users: users.map((user) => ({
+                        username: (user as any).username,
+                        wins: (user as any).wins,
+                        male: (user as any).male,
+                        online: (user as any).online,
+                    })),
                 };
 
                 res.status(200).json(response);
             })
-            .catch(err => {
+            .catch((err) => {
                 res.status(500).json({error: err});
             });
     }
@@ -46,7 +46,7 @@ class UserRouter {
         const username: string = req.body.username;
         const email: string = req.body.email;
         const male: boolean = req.body.male;
-        
+
         /*
             bycrypt.hash will hash the password, however it would have still been vulnerable
             if the user typed a very easy password, e.g. monkey, then the dehash of it,
@@ -56,39 +56,39 @@ class UserRouter {
         */
         User.findOne({username: username})
             .exec()
-            .then(user => {
-                if (user) {
+            .then((doc) => {
+                if (doc) {
                     return res.status(422).json({message: 'Username already exists'});
                 } else {
                     bcrypt.hash(req.body.password, 10, (err, hash) => {
                         if (err) {
                             return res.status(500).json({
-                                error: err
+                                error: err,
                             });
                         // If the creation of the hash is successful, only then create a new user
-                        } else {       
+                        } else {
                             const user = new User({
                                 _id: new mongoose.Types.ObjectId(),
                                 username: username,
                                 email: email,
                                 password: hash,
                                 male: male,
-                                online: true
+                                online: true,
                             });
-            
+
                             user.save()
-                                .then(result => {
-                                    const token: string = CheckAuth.GenerateToken(email, (<any>user)._id);
+                                .then((result) => {
+                                    const token: string = CheckAuth.GenerateToken(email, (user as any)._id);
 
                                     return res.status(200).json({token: token});
                                 })
-                                .catch(err => {
-                                    res.status(500).json({error: err});
+                                .catch((error) => {
+                                    res.status(500).json({error: error});
                                 });
                         }
                     });
                 }
-            });  
+            });
     }
 
     // Login a user
@@ -99,46 +99,43 @@ class UserRouter {
 
         User.findOneAndUpdate({email: email}, {online: true})
             .exec()
-            .then(user => {
+            .then((user) => {
                 if (user) {
 
-                    // If the user is already online, do not let another signin
-                    if ((<any>user).online == true) {
-                        return res.status(401).json({message: 'Already online'});
-                    }
                     
-                    if (autologin == false) {
+                    
+                    if (autologin === false) {
                         // Compare the given password with the one in the databse which is hashed
-                        bcrypt.compare(req.body.password, (<any>user).password, (err, result) => {
+                        bcrypt.compare(req.body.password, (user as any).password, (err, result) => {
                             
                             if (result) {
-                                const token: string = CheckAuth.GenerateToken(email, (<any>user)._id);
+                                const token: string = CheckAuth.GenerateToken(email, (user as any)._id);
                                 
                                 return res.status(200).json({
                                     token: token,
-                                    username: (<any>user).username,
-                                    wins: (<any>user).wins,
-                                    male: (<any>user).male
+                                    username: (user as any).username,
+                                    wins: (user as any).wins,
+                                    male: (user as any).male
                                 });
                             }
-                            // (<any>user).wins => (user as any).wins
+                            
                             res.status(401).json({message: 'Authentication failed'});
-                        })
+                        });
                     } else {
-                        const token: string = CheckAuth.GenerateToken(email, (<any>user)._id);
+                        const token: string = CheckAuth.GenerateToken(email, (user as any)._id);
 
                         return res.status(200).json({
                             token: token,
-                            username: (<any>user).username,
-                            wins: (<any>user).wins,
-                            male: (<any>user).male
+                            username: (user as any).username,
+                            wins: (user as any).wins,
+                            male: (user as any).male
                         });
                     }
                 } else {
                     return res.status(401).json({message: 'Authentication failed'});
                 }
             })
-            .catch(err => {
+            .catch((err) => {
                 res.status(500).json({error: err});
             });
     }
@@ -150,10 +147,44 @@ class UserRouter {
 
         User.findOneAndUpdate({email: email}, {online: false})
             .exec()
-            .then(result => {
+            .then((result) => {
                 res.status(200).json({message: 'User logged off'});
             })
-            .catch(err => {
+            .catch((err) => {
+                res.status(500).json({error: err});
+            });
+    }
+
+    // Update number of won games of a player
+    public UpdateWins(req: Request, res: Response, next: NextFunction): void { 
+        
+        const email: string = req.body.email;
+        const wins: number = req.body.wins;
+
+        User.findOneAndUpdate({email: email}, {wins: wins})
+            .exec()
+            .then((result) => {
+                res.status(200).json({message: 'User score updated'});
+            })
+            .catch((err) => {
+                res.status(500).json({error: err});
+            });
+    }
+
+    // Get an individual user's information
+    public GetPlayer(req: Request, res: Response, next: NextFunction): void {
+
+        const email: string = req.params.email;
+
+        User.findOne({email: email})
+            .exec()
+            .then((doc) => {
+                if (doc) {
+                    res.status(200).json({doc});
+                } else {
+                    res.status(404).json({message: 'No user found with the provided email'})
+                }
+            }).catch((err) => {
                 res.status(500).json({error: err});
             });
     }
@@ -163,8 +194,10 @@ class UserRouter {
         this.router.get('/', CheckAuth.LoginCheck, this.GetAllUsers);
         this.router.post('/signup', this.CreateUser);
         this.router.post('/login', this.UserLogin);
+        this.router.post('/wins', CheckAuth.LoginCheck, this.UpdateWins);
+        this.router.get('/:email', CheckAuth.LoginCheck, this.GetPlayer);
         this.router.post('/logout', CheckAuth.InvalidateToken, this.UserLogout);
     }
 }
- 
+
 export default new UserRouter().router;
